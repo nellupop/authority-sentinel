@@ -6,8 +6,8 @@
     "category": "infrastructure"
   },
   {
-    "name": "Helius (PLACEHOLDER - see note)",
-    "program_id": "REPLACE_ME",
+    "name": "Squads V4 Multisig",
+    "program_id": "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf",
     "kind": "program",
     "category": "infrastructure"
   },
@@ -24,7 +24,7 @@
     "category": "memes"
   },
   {
-    "name": "ANSEM / The Black Bull (UNVERIFIED - see note)",
+    "name": "ANSEM / The Black Bull",
     "program_id": "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump",
     "kind": "mint",
     "category": "memes"
