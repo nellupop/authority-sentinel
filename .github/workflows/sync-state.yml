@@ -1,0 +1,57 @@
+name: Sync live authority state
+
+# Runs the real authority_diff.py against live Solana RPC on a schedule and
+# commits the result into data/, so the GitHub Pages dashboard never goes
+# stale. No ZeroClaw daemon needed here -- this calls the script directly,
+# the same stdlib-only script the daemon calls via the shell tool.
+#
+# Cadence is 30 minutes, not the daemon's 5 -- GitHub's own docs note
+# sub-15-minute scheduled workflows can be silently delayed/dropped under
+# load, and public Solana RPC isn't meant for a shared-IP CI runner hammering
+# it every 5 minutes. 30 min keeps the dashboard genuinely fresh without
+# either problem. Bring your own RPC via the SOLANA_RPC_URL secret below if
+# you want tighter cadence later.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run authority_diff.py against live Solana RPC
+        working-directory: skills/authority-watch
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}   # optional; falls back to public RPC if unset
+        run: python authority_diff.py
+
+      - name: Sync results into data/ for the dashboard
+        run: |
+          cp skills/authority-watch/state.json data/state.json
+          python3 - << 'PYEOF'
+          import json, datetime
+          meta = {
+            "last_synced_utc": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "note": "Auto-synced by a scheduled GitHub Action running authority_diff.py against live Solana RPC. See .github/workflows/sync-state.yml."
+          }
+          json.dump(meta, open('data/meta.json', 'w'), indent=2)
+          PYEOF
+
+      - name: Commit and push if anything changed
+        run: |
+          git config user.name "authority-sentinel-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/state.json data/meta.json
+          git diff --cached --quiet || git commit -m "chore: sync live authority state"
+          git push
