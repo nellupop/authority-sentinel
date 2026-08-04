@@ -26,7 +26,7 @@ from pathlib import Path
 SKILL_DIR = Path(__file__).resolve().parent
 PROGRAMS_FILE = SKILL_DIR / "programs.json"
 STATE_FILE = SKILL_DIR / "state.json"
-RPC_URL = os.environ.get("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com")
+RPC_URL = os.environ.get("SOLANA_RPC_URL") or "https://api.mainnet-beta.solana.com"
 
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
