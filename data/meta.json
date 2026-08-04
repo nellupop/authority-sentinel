@@ -1,0 +1,4 @@
+{
+  "last_synced_utc": "2026-08-03T18:07:28Z",
+  "note": "Seeded from a real, confirmed-live daemon run against mainnet Solana RPC. Push a fresh data/state.json from your own run to update this dashboard -- see README for the one-line command."
+}

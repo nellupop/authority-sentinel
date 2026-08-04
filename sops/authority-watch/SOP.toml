@@ -1,0 +1,14 @@
+[sop]
+name = "authority-watch"
+description = "Poll a Solana program's upgrade authority + governing multisig; alert on change."
+version = "0.1.0"
+max_concurrent = 1
+admission_policy = "coalesce"   # a poll already in flight covers a trigger that lands mid-run
+execution_mode = "auto"         # one of: auto | supervised | step_by_step | priority_based | deterministic
+agent = "sentinel"              # binds this SOP's headless/cron dispatch to a live agent loop --
+                                 # without this, cron-triggered runs park forever with
+                                 # "no agent loop available to execute" (confirmed via -v daemon logs)
+
+[[triggers]]
+type = "cron"
+expression = "*/5 * * * *"   # every 5 minutes -- NOT `schedule`, confirmed via TOML parse error

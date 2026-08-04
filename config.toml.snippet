@@ -1,0 +1,65 @@
+# Merge into your ~/.zeroclaw/config.toml. Secrets (bot_token, api_key) go in
+# via masked `zeroclaw config set` prompts, never pasted in plaintext --
+# shown here only as placeholders for readability.
+#
+# This is the ACTUAL working config, confirmed against a live daemon run
+# (2026-08-03, see SOP.md). A few fields here don't match a first-guess
+# config and were only found by reading real parse-error / warning output --
+# each is called out below.
+
+[providers.models.gemini.default]
+model = "gemini-flash-latest"   # NOT "gemini-2.5-flash" -- that model (and
+                                 # "gemini-2.5-flash-lite") both 404 as
+                                 # "no longer available to new users" on a
+                                 # freshly created API key. "gemini-flash-latest"
+                                 # is Google's floating alias to their current
+                                 # recommended Flash model -- more resilient
+                                 # to this happening again.
+# api_key set via: zeroclaw config set providers.models.gemini.default.api_key
+
+[channels.telegram.home]
+enabled = true
+# bot_token set via: zeroclaw config set channels.telegram.home.bot_token
+
+[agents.sentinel]
+model_provider = "gemini.default"
+channels = ["telegram.home"]
+skill_bundles = ["security"]
+risk_profile = "automated"
+cron_jobs = ["authority-watch-trigger"]   # REQUIRED: a declarative [cron.*]
+                                           # job is registered but inert
+                                           # ("Skipping declarative cron job:
+                                           # no [agents.<x>].cron_jobs entry
+                                           # claims this id") until an agent
+                                           # explicitly claims it here.
+
+[sop]
+sops_dir = "shared/sops"   # use an ABSOLUTE path if you ever run `zeroclaw`
+                            # commands from outside ~/.zeroclaw -- this is
+                            # resolved relative to the CURRENT WORKING
+                            # DIRECTORY, not ~/.zeroclaw, and silently finding
+                            # nothing looks identical to a missing SOP.
+
+[skill_bundles.security]
+
+# risk_profiles.supervised (ZeroClaw's default) gates `shell` behind a
+# [Y]es/[N]o approval prompt -- fine interactively, fatal for an unattended
+# cron-driven agent, since nothing is there to answer it and the run just
+# parks forever. This profile turns that off for THIS agent specifically.
+[risk_profiles.automated]
+gated_actions = []
+allowed_commands = ["python", "python3", "git", "npm", "cargo", "echo", "dir", "type", "findstr", "where", "more", "date", "ls", "cat", "grep", "find", "pwd", "wc", "head", "tail", "df", "du", "uname", "uptime", "hostname", "pip", "node"]
+
+# The declarative cron job itself. `job_type = "agent"` is the key field --
+# the default is "shell" (run a literal command), which is NOT what you want
+# here. This creates a genuine live agent turn on schedule, which is what
+# lets execution_mode = "auto" steps actually run (see SOP.md's comment on
+# why a bare SOP-level cron trigger alone isn't enough).
+[cron.authority-watch-trigger]
+job_type = "agent"
+prompt = "Run the authority-watch SOP now."
+enabled = true
+
+[cron.authority-watch-trigger.schedule]
+kind = "cron"
+expr = "*/5 * * * *"

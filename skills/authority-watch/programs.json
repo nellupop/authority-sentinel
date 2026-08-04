@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Meteora DLMM",
+    "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+    "kind": "program",
+    "category": "infrastructure"
+  },
+  {
+    "name": "Helius (PLACEHOLDER - see note)",
+    "program_id": "REPLACE_ME",
+    "kind": "program",
+    "category": "infrastructure"
+  },
+  {
+    "name": "PNUT (Peanut the Squirrel)",
+    "program_id": "2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump",
+    "kind": "mint",
+    "category": "memes"
+  },
+  {
+    "name": "CHILLGUY",
+    "program_id": "Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump",
+    "kind": "mint",
+    "category": "memes"
+  },
+  {
+    "name": "ANSEM / The Black Bull (UNVERIFIED - see note)",
+    "program_id": "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump",
+    "kind": "mint",
+    "category": "memes"
+  },
+  {
+    "name": "Jupiter Aggregator v6",
+    "program_id": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+    "kind": "program",
+    "category": "dex-aggregation"
+  },
+  {
+    "name": "Kamino Lending",
+    "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+    "kind": "program",
+    "category": "lending"
+  },
+  {
+    "name": "Switchboard On-Demand",
+    "program_id": "SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv",
+    "kind": "program",
+    "category": "oracles"
+  }
+]

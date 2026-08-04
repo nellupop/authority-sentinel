@@ -1,0 +1,14 @@
+[skill]
+name = "authority-watch"
+description = "Fetch upgrade-authority / multisig state for a watchlist of Solana programs and diff against last-known state."
+version = "0.1.0"
+author = "verner"
+tags = ["solana", "security", "read-only"]
+
+# The installed ZeroClaw build (v0.8.4) does not support [[skill.tools]] for
+# defining custom shell/http tools directly in SKILL.toml (unknown field
+# `tools`, confirmed via `zeroclaw -v daemon` parse error). The
+# authority_diff.py script is instead invoked through the stock built-in
+# `shell` tool, with the exact literal command spelled out in SOP.md's step
+# instructions -- see sops/authority-watch/SOP.md. No custom tool definition
+# needed or supported here.

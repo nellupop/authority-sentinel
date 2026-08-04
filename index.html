@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authority Sentinel — a quiet watcher for Solana authority changes</title>
+<meta name="description" content="A T0 read-only agent that watches Solana program and mint authorities, and stays silent until one of them changes. Built on ZeroClaw.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B0F14; --panel:#131A22; --panel-2:#0F151C; --line:#22303B;
+    --signal:#E8A33D; --signal-dim:#8a6224; --calm:#4FD1AE; --calm-dim:#2f7a68;
+    --text:#E7ECF2; --muted:#7C8C9C; --muted-2:#4c5966;
+    --radius:10px;
+    --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Consolas,monospace;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--ink); color:var(--text); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+  }
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--signal); outline-offset:3px; border-radius:4px}
+  .wrap{max-width:960px; margin:0 auto; padding:0 24px}
+  ::selection{background:var(--signal); color:var(--ink)}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:20; backdrop-filter:blur(10px);
+    background:rgba(11,15,20,.82); border-bottom:1px solid var(--line);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; height:60px}
+  .brand{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:600; font-size:14px; letter-spacing:.02em}
+  .brand .dot{width:8px; height:8px; border-radius:50%; background:var(--calm); box-shadow:0 0 0 3px rgba(79,209,174,.15)}
+  nav .links{display:flex; gap:22px; font-size:13px; color:var(--muted)}
+  nav .links a{text-decoration:none; transition:color .15s}
+  nav .links a:hover{color:var(--text)}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:88px 0 40px; position:relative; overflow:hidden}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--signal); margin:0 0 18px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:''; width:16px; height:1px; background:var(--signal)}
+  h1{
+    font-family:var(--mono); font-weight:700; font-size:clamp(32px,6vw,56px);
+    line-height:1.05; letter-spacing:-.01em; margin:0 0 20px; max-width:14ch;
+  }
+  .lede{font-size:18px; color:var(--muted); max-width:52ch; margin:0 0 36px}
+  .lede strong{color:var(--text); font-weight:500}
+
+  canvas#trace{display:block; width:100%; height:96px; margin:0 0 40px}
+  .trace-caption{
+    font-family:var(--mono); font-size:11.5px; color:var(--muted-2);
+    display:flex; justify-content:space-between; margin-top:-30px; margin-bottom:44px;
+    letter-spacing:.02em;
+  }
+
+  .cta-row{display:flex; gap:14px; flex-wrap:wrap}
+  .btn{
+    font-family:var(--sans); font-weight:600; font-size:14px; padding:12px 20px;
+    border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    transition:transform .12s ease, background .15s;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn-primary{background:var(--signal); color:#1a1204}
+  .btn-primary:hover{background:#f0ad4d}
+  .btn-ghost{background:transparent; color:var(--text); border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--muted)}
+
+  /* ---------- sections ---------- */
+  section{padding:64px 0; border-top:1px solid var(--line)}
+  .section-head{margin-bottom:36px}
+  .section-eyebrow{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted-2); margin:0 0 10px;
+  }
+  h2{font-family:var(--mono); font-weight:600; font-size:26px; margin:0 0 8px; letter-spacing:-.01em}
+  .section-desc{color:var(--muted); font-size:15px; max-width:56ch; margin:0}
+
+  /* ---------- watchlist ---------- */
+  #sync-line{
+    font-family:var(--mono); font-size:12.5px; color:var(--muted-2); margin-bottom:28px;
+    display:flex; align-items:center; gap:8px;
+  }
+  #sync-line .live-dot{width:6px; height:6px; border-radius:50%; background:var(--calm)}
+  .cat-group{margin-bottom:30px}
+  .cat-label{
+    font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line);
+  }
+  .row{
+    display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center;
+    padding:14px 16px; border-radius:var(--radius); background:var(--panel);
+    border:1px solid var(--line); margin-bottom:8px;
+  }
+  .row .name{font-weight:500; font-size:14.5px}
+  .row .kind{font-family:var(--mono); font-size:11px; color:var(--muted-2); text-transform:uppercase}
+  .row .addr{font-family:var(--mono); font-size:12.5px; color:var(--muted); text-decoration:none}
+  .row .addr:hover{color:var(--text)}
+  .row .status{font-family:var(--mono); font-size:12px; text-align:right; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .badge{width:9px; height:9px; border-radius:50%; flex:none}
+  .badge.amber{background:var(--signal); box-shadow:0 0 0 3px rgba(232,163,61,.15)}
+  .badge.teal{background:var(--calm); box-shadow:0 0 0 3px rgba(79,209,174,.15)}
+  .badge.grey{background:var(--muted-2)}
+  #watchlist-loading{font-family:var(--mono); font-size:13px; color:var(--muted-2)}
+  @media (max-width:640px){
+    .row{grid-template-columns:1fr; gap:6px}
+    .row .status{text-align:left; max-width:100%; white-space:normal}
+  }
+
+  /* ---------- flow ---------- */
+  .flow{display:flex; flex-direction:column; gap:0}
+  .flow-step{
+    display:flex; gap:18px; align-items:flex-start; padding:18px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .flow-step:last-child{border-bottom:none}
+  .flow-num{
+    font-family:var(--mono); font-size:12px; color:var(--ink); background:var(--muted);
+    width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+    flex:none; margin-top:2px; font-weight:600;
+  }
+  .flow-step.live .flow-num{background:var(--signal)}
+  .flow-title{font-weight:600; font-size:14.5px; margin:0 0 4px}
+  .flow-body{color:var(--muted); font-size:13.5px; margin:0; max-width:56ch}
+  .flow-body code{font-family:var(--mono); font-size:12.5px; background:var(--panel-2); padding:1px 6px; border-radius:4px; color:var(--text)}
+
+  /* ---------- custody ---------- */
+  .custody-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:640px){.custody-grid{grid-template-columns:1fr}}
+  .custody-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px}
+  .custody-card h3{font-family:var(--mono); font-size:13px; margin:0 0 10px; letter-spacing:.02em}
+  .custody-card ul{margin:0; padding-left:18px; font-size:13.5px; color:var(--muted)}
+  .custody-card li{margin-bottom:6px}
+  .tier-badge{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:13px;
+    background:var(--panel-2); border:1px solid var(--calm-dim); color:var(--calm);
+    padding:8px 14px; border-radius:20px; margin-bottom:28px;
+  }
+  .tier-badge .dot{width:7px; height:7px; border-radius:50%; background:var(--calm)}
+
+  /* ---------- reproduce ---------- */
+  .code-block{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px; font-family:var(--mono); font-size:13px; color:var(--text);
+    position:relative; margin-bottom:14px; overflow-x:auto;
+  }
+  .code-block .copy{
+    position:absolute; top:10px; right:10px; background:var(--panel); border:1px solid var(--line);
+    color:var(--muted); font-family:var(--sans); font-size:11px; padding:5px 10px; border-radius:6px;
+    cursor:pointer; transition:color .15s, border-color .15s;
+  }
+  .code-block .copy:hover{color:var(--text); border-color:var(--muted)}
+  .code-block .copy.copied{color:var(--calm); border-color:var(--calm-dim)}
+
+  /* ---------- footer ---------- */
+  footer{padding:40px 0 60px; color:var(--muted-2); font-size:13px}
+  footer .wrap{display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px}
+  footer a{text-decoration:none; color:var(--muted)}
+  footer a:hover{color:var(--text)}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> AUTHORITY SENTINEL</div>
+    <div class="links">
+      <a href="#watching">Watching now</a>
+      <a href="#how">How it runs</a>
+      <a href="#custody">Custody</a>
+      <a href="https://github.com/nellupop/authority-sentinel">Repo</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">ZeroClaw × Solana bounty submission</p>
+    <h1>A quiet watcher for Solana authority changes.</h1>
+    <p class="lede">Authority Sentinel polls a handful of Solana programs and token mints every
+      five minutes, checks who still controls them, and <strong>says nothing at all</strong>
+      until one of them changes. Then it tells you on Telegram.</p>
+
+    <canvas id="trace" aria-hidden="true"></canvas>
+    <div class="trace-caption">
+      <span>polling every 5 min</span>
+      <span>silent unless something moves</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#watching">View the live watchlist</a>
+      <a class="btn btn-ghost" href="https://github.com/nellupop/authority-sentinel">Read the repo</a>
+    </div>
+  </div>
+</header>
+
+<section id="watching">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Live data</p>
+      <h2>What it's watching right now</h2>
+      <p class="section-desc">Every address below was checked by a real agent run against live
+        mainnet Solana RPC — not a mockup. Grouped by category, not by rank; nothing here is a
+        sequence.</p>
+    </div>
+    <div id="sync-line"><span class="live-dot"></span> <span id="sync-text">loading last sync…</span></div>
+    <div id="watchlist-loading">fetching data/state.json…</div>
+    <div id="watchlist"></div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Architecture</p>
+      <h2>How a single check actually runs</h2>
+      <p class="section-desc">This part genuinely is a sequence — each step hands off to the
+        next one, in order, every five minutes.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-step live">
+        <div class="flow-num">1</div>
+        <div>
+          <p class="flow-title">A scheduled cron job wakes a real agent turn</p>
+          <p class="flow-body">Not a headless dispatch — a declarative <code>job_type = "agent"</code> cron job that gives the SOP engine a live agent loop to run against.</p>
+        </div>
+      </div>
+      <div class="flow-step live">
+        <div class="flow-num">2</div>
+        <div>
+          <p class="flow-title">The agent calls the stock <code>shell</code> tool</p>
+          <p class="flow-body">One fixed, literal command — no free-form input, so there's nothing for a prompt injection to land in.</p>
+        </div>
+      </div>
+      <div class="flow-step live">
+        <div class="flow-num">3</div>
+        <div>
+          <p class="flow-title">A stdlib-only Python script hits live Solana RPC</p>
+          <p class="flow-body">Parses the BPF-Loader-Upgradeable and SPL Token Mint account layouts by hand, byte offsets and all — no SDK dependency.</p>
+        </div>
+      </div>
+      <div class="flow-step live">
+        <div class="flow-num">4</div>
+        <div>
+          <p class="flow-title">State gets diffed and written to disk</p>
+          <p class="flow-body">First run just establishes a baseline. No prior state means no false-positive alert.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div>
+          <p class="flow-title">Telegram gets a message — only if something changed</p>
+          <p class="flow-body">Zero changes, zero noise. That silence is the point.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="custody">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Safety &amp; custody</p>
+      <h2>What it can and can't do</h2>
+    </div>
+    <div class="tier-badge"><span class="dot"></span> Custody tier T0 — read-only</div>
+    <div class="custody-grid">
+      <div class="custody-card">
+        <h3>WHAT IT HOLDS</h3>
+        <ul>
+          <li>An optional Solana RPC key</li>
+          <li>A Telegram bot token</li>
+          <li>Nothing else</li>
+        </ul>
+      </div>
+      <div class="custody-card">
+        <h3>WHAT IT CAN NEVER DO</h3>
+        <ul>
+          <li>Hold a wallet</li>
+          <li>Sign a transaction</li>
+          <li>Move any funds, anywhere</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reproduce">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="section-eyebrow">Try it yourself</p>
+      <h2>Set up in an evening</h2>
+      <p class="section-desc">The full walkthrough — including the config bugs we actually hit
+        and how we found them — is in the repo README. Here's the short version.</p>
+    </div>
+
+    <div class="code-block">
+      <button class="copy" data-copy="curl -fsSL https://raw.githubusercontent.com/zeroclaw-labs/zeroclaw/master/install.sh | bash">Copy</button>
+      curl -fsSL https://raw.githubusercontent.com/zeroclaw-labs/zeroclaw/master/install.sh | bash
+    </div>
+    <div class="code-block">
+      <button class="copy" data-copy="git clone https://github.com/nellupop/authority-sentinel.git">Copy</button>
+      git clone https://github.com/nellupop/authority-sentinel.git
+    </div>
+    <a class="btn btn-ghost" href="https://github.com/nellupop/authority-sentinel#readme">Full setup walkthrough →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Authority Sentinel — built on <a href="https://github.com/zeroclaw-labs/zeroclaw">ZeroClaw</a></span>
+    <span><a href="https://github.com/nellupop/authority-sentinel">github.com/nellupop/authority-sentinel</a></span>
+  </div>
+</footer>
+
+<script>
+// ---------- signal trace (hero signature element) ----------
+(function(){
+  const canvas = document.getElementById('trace');
+  const ctx = canvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w, h, dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  let t = 0;
+  let blipAt = 140 + Math.random()*200; // when the next blip happens
+  let blipProgress = -1;
+
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    const mid = h/2;
+    ctx.beginPath();
+    ctx.moveTo(0, mid);
+    const points = 220;
+    for(let i=0;i<=points;i++){
+      const x = (i/points)*w;
+      const phase = i - t;
+      let y = mid + Math.sin(phase*0.05)*1.6 + Math.sin(phase*0.13)*0.8;
+      if (blipProgress >= 0){
+        const dist = i - blipProgress;
+        if (Math.abs(dist) < 14){
+          y -= Math.exp(-(dist*dist)/22) * 26;
+        }
+      }
+      ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = 'rgba(79,209,174,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    if (!reduced){
+      t += 0.6;
+      if (blipProgress >= 0){
+        blipProgress += 1.4;
+        if (blipProgress > points + 20) blipProgress = -1;
+      } else {
+        blipAt -= 0.6;
+        if (blipAt <= 0){ blipProgress = 0; blipAt = 260 + Math.random()*260; }
+      }
+      requestAnimationFrame(frame);
+    }
+  }
+  frame();
+})();
+
+// ---------- live watchlist ----------
+(function(){
+  const CATEGORY_LABELS = {
+    'infrastructure': 'Infrastructure',
+    'memes': 'Memes',
+    'dex-aggregation': 'DEX & Aggregation',
+    'lending': 'Lending',
+    'oracles': 'Oracles'
+  };
+
+  Promise.all([
+    fetch('data/programs.json').then(r => r.json()),
+    fetch('data/state.json').then(r => r.json()).catch(() => ({})),
+    fetch('data/meta.json').then(r => r.json()).catch(() => null)
+  ]).then(([programs, state, meta]) => {
+    document.getElementById('watchlist-loading').style.display = 'none';
+
+    if (meta && meta.last_synced_utc){
+      document.getElementById('sync-text').textContent =
+        'last synced ' + meta.last_synced_utc.replace('T',' ').replace('Z',' UTC');
+    } else {
+      document.getElementById('sync-text').textContent = 'sync time unknown';
+    }
+
+    const byCategory = {};
+    programs.forEach(p => {
+      const cat = p.category || 'other';
+      (byCategory[cat] = byCategory[cat] || []).push(p);
+    });
+
+    const container = document.getElementById('watchlist');
+    Object.keys(byCategory).sort().forEach(cat => {
+      const group = document.createElement('div');
+      group.className = 'cat-group';
+      const label = document.createElement('div');
+      label.className = 'cat-label';
+      label.textContent = CATEGORY_LABELS[cat] || cat;
+      group.appendChild(label);
+
+      byCategory[cat].forEach(p => {
+        const status = state[p.program_id];
+        const row = document.createElement('div');
+        row.className = 'row';
+
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (
+          !status ? 'grey' :
+          (status === 'immutable' || status.includes('renounced')) ? 'teal' : 'amber'
+        );
+
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = p.name;
+
+        const kind = document.createElement('span');
+        kind.className = 'kind';
+        kind.textContent = p.kind;
+
+        const addr = document.createElement('a');
+        addr.className = 'addr';
+        addr.href = 'https://solscan.io/account/' + p.program_id;
+        addr.target = '_blank'; addr.rel = 'noopener';
+        addr.textContent = p.program_id.slice(0,6) + '…' + p.program_id.slice(-4);
+
+        const stat = document.createElement('span');
+        stat.className = 'status';
+        stat.textContent = status || 'not yet synced';
+
+        row.append(badge, name, kind, addr, stat);
+        group.appendChild(row);
+      });
+
+      container.appendChild(group);
+    });
+  }).catch(err => {
+    document.getElementById('watchlist-loading').textContent =
+      'Could not load watchlist data — check data/programs.json and data/state.json exist.';
+  });
+})();
+
+// ---------- copy buttons ----------
+document.querySelectorAll('.copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'Copied'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+    });
+  });
+});
+</script>
+
+</body>
+</html>
