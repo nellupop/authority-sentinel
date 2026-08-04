@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authority Sentinel</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #14171c; --border: #232830;
+    --text: #e6e9ef; --dim: #8a92a0; --accent: #6ee7b7;
+    --warn: #f5b942; --err: #f2685c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 48px 24px 80px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 40px; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--dim); font-weight: 600; margin: 0 0 10px;
+  }
+  section { margin-bottom: 32px; }
+  table {
+    width: 100%; border-collapse: collapse; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--dim); font-weight: 500;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  tr:last-child td { border-bottom: none; }
+  td.name { font-weight: 500; }
+  td.id a { color: var(--dim); text-decoration: none; font-family: ui-monospace, monospace; font-size: 12px; }
+  td.id a:hover { color: var(--text); }
+  td.kind { color: var(--dim); font-size: 12px; }
+  td.status { font-family: ui-monospace, monospace; font-size: 12px; color: var(--dim); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.ok { background: rgba(110,231,183,0.12); color: var(--accent); }
+  .badge.changed { background: rgba(245,185,66,0.15); color: var(--warn); }
+  .badge.err { background: rgba(242,104,92,0.15); color: var(--err); }
+  footer { color: var(--dim); font-size: 12px; margin-top: 40px; }
+  footer a { color: var(--dim); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Authority Sentinel</h1>
+    <p class="sub">Last checked 2026-08-04 18:15 UTC · read-only · T0 · <a href="https://github.com/zeroclaw-labs/zeroclaw" style="color:var(--dim)">ZeroClaw</a></p>
+    
+        <section>
+          <h2>other</h2>
+          <table>
+            <thead><tr><th>Name</th><th>Address</th><th>Kind</th><th>Authority state</th><th></th></tr></thead>
+            <tbody>
+        <tr>
+          <td class="name">test-program</td>
+          <td class="id"><a href="https://solscan.io/account/PROGRAM_ID_1" target="_blank" rel="noopener">PROGRAM_…M_ID_1</a></td>
+          <td class="kind">program</td>
+          <td class="status">cGfHiC6Kgg3FpFZvgwGcswsCRtp4aBP2fzuXRQPizuN</td>
+          <td><span class="badge changed">changed</span></td>
+        </tr></tbody>
+          </table>
+        </section>
+    <footer>Static snapshot regenerated each poll. Source: authority_diff.py.</footer>
+  </div>
+</body>
+</html>

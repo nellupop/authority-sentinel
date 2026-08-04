@@ -83,7 +83,7 @@ def upgrade_authority_for(program_id: str):
             return "immutable", None  # upgrade authority renounced
         authority = b58encode(pd_data[13:45])
         return authority, None
-    except (urllib.error.URLError, KeyError, IndexError, struct.error) as e:
+    except (urllib.error.URLError, OSError, KeyError, IndexError, struct.error) as e:
         return None, str(e)
 
 
@@ -125,7 +125,7 @@ def mint_authority_for(mint_id: str):
         freeze_auth = b58encode(data[50:82]) if freeze_tag == 1 else "renounced"
 
         return f"mint={mint_auth} freeze={freeze_auth}", None
-    except (urllib.error.URLError, KeyError, IndexError, struct.error) as e:
+    except (urllib.error.URLError, OSError, KeyError, IndexError, struct.error) as e:
         return None, str(e)
 
 
