@@ -1,4 +1,4 @@
 {
-  "last_synced_utc": "2026-08-25T09:57:17Z",
+  "last_synced_utc": "2026-08-25T10:23:40Z",
   "note": "Auto-synced by a scheduled GitHub Action running authority_diff.py against live Solana RPC. See .github/workflows/sync-state.yml."
 }
